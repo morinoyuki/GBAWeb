@@ -1320,7 +1320,13 @@ input[type="range"].volume {
   padding: 0;
   width: min(560px, calc(100vw - 24px));
   max-height: min(86dvh, 760px);
+  overflow: hidden;
   box-shadow: var(--shadow);
+}
+
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
 }
 
 .dialog::backdrop {
@@ -1330,18 +1336,24 @@ input[type="range"].volume {
 
 .dialog-inner {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
-  max-height: min(86dvh, 760px);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .dialog-head {
+  flex: 0 0 auto;
   padding: 16px 18px 12px;
   border-bottom: 1px solid var(--border-soft);
 }
 
 .dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 16px 18px 20px;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .settings-group {

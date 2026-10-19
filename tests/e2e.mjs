@@ -174,6 +174,19 @@ async function runDesktop(browser) {
 
   // ---------------------------------------------------------- key bindings
   await openSettings(page);
+  const settingsScroll = await page.evaluate(() => {
+    const dialog = document.getElementById('settings-dialog');
+    const inner = dialog.querySelector('.dialog-inner');
+    return {
+      dialog: dialog.scrollHeight > dialog.clientHeight,
+      inner: inner.scrollHeight > inner.clientHeight,
+    };
+  });
+  check(
+    'settings dialog has only one scroll container',
+    !settingsScroll.dialog && !settingsScroll.inner,
+    JSON.stringify(settingsScroll),
+  );
   const aKeyChip = page.locator(
     '#key-bindings .keybind-row[data-group="buttons"][data-action="A"] [data-rebind]',
   ).first();
