@@ -105,7 +105,7 @@
       <!-- -------------------------------------------------------- player -->
       <section id="player-view" class="view player-view hidden">
         <div class="player-shell" id="player-shell">
-          <div class="player-meta">
+          <div class="player-meta" id="player-meta">
             <div class="game-title" id="game-title">—</div>
             <div class="player-stats">
               <span class="stat" id="hud-fps">— FPS</span>
@@ -190,9 +190,6 @@
             </div>
           </div>
         </div>
-      </section>
-    </main>
-
     <!-- ------------------------------------------------------- save states -->
     <aside class="side-panel hidden" id="states-panel" aria-label="存档槽位">
       <div class="panel-head">
@@ -216,6 +213,9 @@
         </div>
       </div>
     </aside>
+      </section>
+    </main>
+
 
     <!-- ---------------------------------------------------------- settings -->
     <dialog id="settings-dialog" class="dialog">
@@ -314,7 +314,7 @@
             <h3>关于</h3>
             <p>模拟器核心：<b id="about-engine">mGBA (WASM)</b></p>
             <p>前端：GBA Web · 存档保存在本机</p>
-            <p class="muted small">页面需要 COOP/COEP 响应头（或本项目内置的 coi-serviceworker 兜底）才能启用 WASM 多线程。无法启动时请查看 README 的部署说明。</p>
+            <p class="muted small">模拟器需要浏览器的 WebAssembly 多线程支持。如果无法启动，请尝试使用最新版浏览器并通过 HTTPS 访问。</p>
           </section>
         </div>
       </form>

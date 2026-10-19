@@ -329,6 +329,19 @@ async function runDesktop(browser) {
   });
   await page.waitForTimeout(400);
   check('fullscreen API works', await page.evaluate(() => Boolean(document.fullscreenElement)));
+
+  await page.waitForTimeout(2800);
+  check(
+    'fullscreen chrome auto-hides',
+    await page.evaluate(() => document.getElementById('player-view').classList.contains('chrome-hidden')),
+  );
+  await page.mouse.move(600, 400);
+  await page.waitForTimeout(300);
+  check(
+    'mouse movement restores the fullscreen chrome',
+    !(await page.evaluate(() => document.getElementById('player-view').classList.contains('chrome-hidden'))),
+  );
+
   await page.evaluate(() => document.exitFullscreen?.());
   await page.waitForTimeout(300);
 

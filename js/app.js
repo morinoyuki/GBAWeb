@@ -101,6 +101,7 @@ async function init() {
   setupAudioUnlock();
   setupVisibility();
   setupScreenFit();
+  setupFullscreenChrome();
   setupPanelsOutsideClick();
 
   if (!globalThis.crossOriginIsolated) {
@@ -157,6 +158,8 @@ function cacheElements() {
     'home-view',
     'player-view',
     'player-shell',
+    'player-meta',
+    'toolbar',
     'btn-brand',
     'btn-help',
     'btn-settings',
@@ -372,8 +375,8 @@ function buildHelp() {
       也可以手动导出/导入。清除浏览器站点数据会同时删除这些存档。
     </p>
     <p class="help-note">
-      页面需要 COOP/COEP 响应头（或内置的 coi-serviceworker 兜底）才能启用 WASM 多线程。
-      若模拟器无法启动，请检查部署配置（见 README）。
+      模拟器依赖浏览器的 WebAssembly 多线程支持（SharedArrayBuffer）。如果无法启动，
+      请尝试使用最新版浏览器并通过 HTTPS 访问。
     </p>
   `;
 }
@@ -606,8 +609,8 @@ function showIsolationBanner() {
   const banner = document.createElement('div');
   banner.className = 'isolation-banner';
   banner.innerHTML =
-    '⚠️ 当前页面未启用 <b>COOP/COEP</b> 响应头，SharedArrayBuffer 不可用，模拟器可能无法启动。' +
-    ' 请使用 <code>node serve.mjs</code> 或按 README 配置服务器。';
+    '⚠️ 当前浏览器环境未启用模拟器所需的 WebAssembly 多线程支持，模拟器无法启动。' +
+    ' 请使用最新版浏览器并通过 HTTPS 访问。';
   els.homeView.prepend(banner);
 }
 
@@ -821,7 +824,7 @@ async function openLibraryRom(meta) {
 async function playRom(rom) {
   if (!rom) return;
   if (!globalThis.crossOriginIsolated) {
-    toast('无法启动：页面缺少 COOP/COEP 响应头。请使用 node serve.mjs，或按 README 配置服务器。', 'error', 9000);
+    toast('无法启动：当前浏览器环境不支持模拟器所需的 WebAssembly 多线程，请使用最新版浏览器并通过 HTTPS 访问。', 'error', 9000);
     return;
   }
   const token = ++state.loadToken;
@@ -1297,6 +1300,7 @@ function openStatesPanel() {
 
 function closeStatesPanel() {
   els.statesPanel.classList.add('hidden');
+  showFullscreenChrome();
 }
 
 function toggleStatesPanel() {
@@ -1644,6 +1648,7 @@ function bindUI() {
     dialog.addEventListener('close', () => {
       if (dialog === els.settingsDialog) cancelKeyCapture();
       if (state.playing && !state.paused) state.input?.setEnabled(true);
+      showFullscreenChrome();
     });
   }
 
@@ -1762,6 +1767,83 @@ function setupVisibility() {
       persistPlaytime().catch(() => {});
     }
   });
+}
+
+/* ------------------------------------------------- fullscreen chrome */
+
+const FULLSCREEN_CHROME_IDLE_MS = 2600;
+let chromeHideTimer = null;
+
+function isPlayerFullscreen() {
+  return document.fullscreenElement === els.playerView;
+}
+
+function showFullscreenChrome({ schedule = true } = {}) {
+  if (!isPlayerFullscreen()) return;
+  clearTimeout(chromeHideTimer);
+  chromeHideTimer = null;
+  els.playerView.classList.remove('chrome-hidden');
+  if (els.toolbar) els.toolbar.inert = false;
+  if (els.playerMeta) els.playerMeta.inert = false;
+  if (schedule) {
+    chromeHideTimer = setTimeout(hideFullscreenChrome, FULLSCREEN_CHROME_IDLE_MS);
+  }
+}
+
+function hideFullscreenChrome() {
+  if (!isPlayerFullscreen()) return;
+  if (document.querySelector('dialog[open]')) return;
+  if (!els.statesPanel.classList.contains('hidden')) return;
+  if (els.toolbar?.matches(':hover') || els.playerMeta?.matches(':hover')) return;
+  const active = document.activeElement;
+  if (active && (els.toolbar?.contains(active) || els.playerMeta?.contains(active))) {
+    active.blur();
+  }
+  if (els.toolbar) els.toolbar.inert = true;
+  if (els.playerMeta) els.playerMeta.inert = true;
+  els.playerView.classList.add('chrome-hidden');
+}
+
+function noteFullscreenActivity(event) {
+  if (!isPlayerFullscreen()) return;
+  if (document.querySelector('dialog[open]')) return;
+  const target = event?.target;
+  const overChrome =
+    target instanceof Node &&
+    (els.toolbar?.contains(target) || els.playerMeta?.contains(target));
+  showFullscreenChrome({ schedule: !overChrome });
+}
+
+function exitFullscreenChrome() {
+  clearTimeout(chromeHideTimer);
+  chromeHideTimer = null;
+  els.playerView?.classList.remove('chrome-hidden');
+  if (els.toolbar) els.toolbar.inert = false;
+  if (els.playerMeta) els.playerMeta.inert = false;
+}
+
+function setupFullscreenChrome() {
+  document.addEventListener('fullscreenchange', () => {
+    if (isPlayerFullscreen()) showFullscreenChrome();
+    else exitFullscreenChrome();
+  });
+
+  document.addEventListener('pointermove', noteFullscreenActivity, { passive: true });
+  document.addEventListener('pointerdown', noteFullscreenActivity, { passive: true });
+  document.addEventListener('wheel', noteFullscreenActivity, { passive: true });
+  document.addEventListener('keydown', noteFullscreenActivity);
+
+  for (const element of [els.toolbar, els.playerMeta]) {
+    if (!element) continue;
+    element.addEventListener('pointerenter', () => {
+      if (!isPlayerFullscreen()) return;
+      clearTimeout(chromeHideTimer);
+      showFullscreenChrome({ schedule: false });
+    });
+    element.addEventListener('pointerleave', () => {
+      if (isPlayerFullscreen()) showFullscreenChrome();
+    });
+  }
 }
 
 function setupScreenFit() {

@@ -844,6 +844,29 @@ input[type="range"].volume {
   backdrop-filter: blur(12px);
 }
 
+.player-view:fullscreen .player-meta,
+.player-view:fullscreen .toolbar {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.player-view:fullscreen.chrome-hidden .player-meta,
+.player-view:fullscreen.chrome-hidden .toolbar {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.player-view:fullscreen.chrome-hidden .player-meta {
+  transform: translateY(-10px);
+}
+
+.player-view:fullscreen.chrome-hidden .toolbar {
+  transform: translate(-50%, 14px);
+}
+
+.player-view:fullscreen.chrome-hidden {
+  cursor: none;
+}
+
 /* --------------------------------------------------------- touch controls */
 
 .touch-controls {
@@ -1757,6 +1780,18 @@ kbd {
     bottom: 0;
     z-index: 5;
     margin: 0;
+  }
+
+  .player-view:fullscreen .toolbar {
+    left: 0;
+    right: 0;
+    width: auto;
+    max-width: none;
+    transform: none;
+  }
+
+  .player-view:fullscreen.chrome-hidden .toolbar {
+    transform: translateY(14px);
   }
 }
 
