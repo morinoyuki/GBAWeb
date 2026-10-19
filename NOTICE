@@ -1,0 +1,32 @@
+GBA Web — third-party notices
+=============================
+
+Frontend (index.html, styles.css, js/*, tests/*, tools/*) and the bundled
+homebrew demo ROM (demo/gba-web-demo.gba) are released under the MIT license
+(see LICENSE).
+
+mGBA core — vendor/mgba.js, vendor/mgba.wasm
+---------------------------------------------
+The emulator core is mGBA v2.5.1 (https://mgba.io, https://github.com/mgba-emu/mgba),
+compiled to WebAssembly by the @thenick775/mgba-wasm project
+(https://github.com/thenick775/mgba). Both are licensed under the Mozilla
+Public License 2.0. The full license text is in licenses/MPL-2.0.txt.
+The vendored files are unmodified build artifacts. Source code for the MPL
+covered components is available at the repositories linked above.
+
+fflate — vendor/fflate.js
+-------------------------
+ZIP extraction is provided by fflate (https://github.com/101arrowz/fflate),
+MIT licensed. License text: licenses/fflate-MIT.txt.
+
+coi-serviceworker — coi-serviceworker.js
+-----------------------------------------------
+Cross-origin isolation fallback for static hosts that cannot set response
+headers (https://github.com/gzuidhof/coi-serviceworker), MIT licensed.
+License text: licenses/coi-serviceworker-MIT.txt.
+
+Test ROMs
+---------
+Development testing used the MIT-licensed Game Boy Advance test ROMs from
+https://github.com/jsmolka/gba-tests. They are not distributed with this app.
+The built-in demo ROM is original homebrew written for this project.

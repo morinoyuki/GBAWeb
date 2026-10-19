@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0b0b12" />
+    <title>GBA Web · 浏览器里的 Game Boy Advance</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%236c5ce7'/%3E%3Crect x='8' y='14' width='48' height='32' rx='4' fill='%230b0b12'/%3E%3Ccircle cx='22' cy='48' r='5' fill='%23a29bfe'/%3E%3Ccircle cx='36' cy='48' r='5' fill='%23a29bfe'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./coi-serviceworker.js"></script>
+  </head>
+  <body>
+    <svg aria-hidden="true" class="svg-sprite">
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" /></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 5h3v14H7zM14 5h3v14h-3z" /></symbol>
+      <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z" /><path d="M8 4v6h7V4M8 20v-6h8v6" /></symbol>
+      <symbol id="i-load" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v4h16v-4" /></symbol>
+      <symbol id="i-rewind" viewBox="0 0 24 24"><path d="M11 6v12L3 12zM21 6v12l-8-6z" /></symbol>
+      <symbol id="i-ff" viewBox="0 0 24 24"><path d="M3 6v12l8-6zM13 6v12l8-6z" /></symbol>
+      <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" /><path d="M16 8a5 5 0 010 8M18.5 5.5a8.5 8.5 0 010 13" /></symbol>
+      <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" /><path d="M16 9l5 6M21 9l-5 6" /></symbol>
+      <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2" /><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8" /></symbol>
+      <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.6 2.6 0 015.1.7c0 1.8-2.6 2-2.6 3.8" /><circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none" /></symbol>
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9h-6v-6h-4v6H4z" /></symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1" /><rect x="13" y="4" width="7" height="7" rx="1" /><rect x="4" y="13" width="7" height="7" rx="1" /><rect x="13" y="13" width="7" height="7" rx="1" /></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5" /><path d="M4 20h16" /></symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 20h16" /></symbol>
+      <symbol id="i-chip" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2" /><path d="M10 4v3M14 4v3M10 17v3M14 17v3M4 10h3M4 14h3M17 10h3M17 14h3" /></symbol>
+      <symbol id="i-github" viewBox="0 0 24 24"><path d="M12 .5C5.73.5.5 5.73.5 12a11.5 11.5 0 007.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.54-3.88-1.54-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .96-.3 3.15 1.18a10.9 10.9 0 015.74 0c2.19-1.48 3.15-1.18 3.15-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.69 5.4-5.25 5.69.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0023.5 12C23.5 5.73 18.27.5 12 .5z" /></symbol>
+      <symbol id="i-gamepad" viewBox="0 0 24 24"><path d="M7 8h10a5 5 0 015 5v1a4 4 0 01-7 3l-2-2h-2l-2 2a4 4 0 01-7-3v-1a5 5 0 015-5z" /><path d="M8 11v4M6 13h4" /><circle cx="17" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="19.5" cy="14.5" r="1" fill="currentColor" stroke="none" /></symbol>
+    </svg>
+
+    <header class="app-header">
+      <button class="brand" id="btn-brand" type="button" title="回到首页">
+        <span class="brand-mark"><svg><use href="#i-gamepad" /></svg></span>
+        <span class="brand-text">GBA<span>Web</span></span>
+      </button>
+      <div class="header-right">
+        <span class="engine-badge" id="engine-badge" title="模拟器核心">mGBA · WASM</span>
+        <a class="icon-btn repo-link" href="https://github.com/morinoyuki/GBAWeb" target="_blank" rel="noreferrer" title="GitHub 仓库" aria-label="GitHub 仓库">
+          <svg><use href="#i-github" /></svg>
+        </a>
+        <button class="icon-btn" id="btn-help" type="button" title="帮助 (H)" aria-label="帮助">
+          <svg><use href="#i-help" /></svg>
+        </button>
+        <button class="icon-btn" id="btn-settings" type="button" title="设置 (O)" aria-label="设置">
+          <svg><use href="#i-settings" /></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <!-- ---------------------------------------------------------- home -->
+      <section id="home-view" class="view home-view">
+        <div class="hero">
+          <p class="eyebrow">Game Boy Advance · in your browser</p>
+          <h1>在浏览器里玩 <span class="grad">GBA</span></h1>
+          <p class="sub">mGBA 核心 · WebAssembly · 即时存档 · 倍速 / 倒带 · 手柄与触屏</p>
+
+          <div class="hero-actions">
+            <button class="btn primary big" id="btn-open-rom" type="button">
+              <svg><use href="#i-play" /></svg>
+              打开 ROM
+            </button>
+            <button class="btn ghost big hidden" id="btn-continue" type="button">
+              <svg><use href="#i-load" /></svg>
+              继续上次
+            </button>
+            <button class="btn ghost big" id="btn-demo" type="button">
+              <svg><use href="#i-gamepad" /></svg>
+              内置演示
+            </button>
+          </div>
+
+          <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="拖放或选择 ROM 文件">
+            <svg class="drop-icon"><use href="#i-chip" /></svg>
+            <strong>把 .gba 或 .zip 拖到这里</strong>
+            <span>或点击选择文件 · 所有数据只保存在本机浏览器中</span>
+          </div>
+
+          <ul class="features">
+            <li><svg><use href="#i-save" /></svg>8 个即时存档槽</li>
+            <li><svg><use href="#i-ff" /></svg>最高 8× 加速</li>
+            <li><svg><use href="#i-rewind" /></svg>按住倒带</li>
+            <li><svg><use href="#i-gamepad" /></svg>键盘 / 手柄 / 触屏</li>
+            <li><svg><use href="#i-chip" /></svg>存档自动持久化</li>
+          </ul>
+
+          <p class="disclaimer">本站不附带任何商业游戏 ROM，请使用您合法拥有的游戏备份。内置演示为原创 homebrew。<br />前端 MIT · 模拟器核心 <a href="https://mgba.io" target="_blank" rel="noreferrer">mGBA</a> (MPL-2.0) · <a href="https://github.com/morinoyuki/GBAWeb" target="_blank" rel="noreferrer">GitHub 仓库</a></p>
+        </div>
+
+        <section class="library-section hidden" id="library-section">
+          <div class="section-head">
+            <h2>最近游玩</h2>
+            <span class="muted" id="library-count"></span>
+          </div>
+          <div class="library-grid" id="library-grid"></div>
+        </section>
+      </section>
+
+      <!-- -------------------------------------------------------- player -->
+      <section id="player-view" class="view player-view hidden">
+        <div class="player-shell" id="player-shell">
+          <div class="player-meta">
+            <div class="game-title" id="game-title">—</div>
+            <div class="player-stats">
+              <span class="stat" id="hud-fps">— FPS</span>
+              <span class="stat" id="hud-speed">1×</span>
+              <span class="stat muted" id="hud-audio">音频 —</span>
+            </div>
+          </div>
+
+          <div class="stage" id="stage">
+            <canvas id="screen" width="240" height="160" aria-label="GBA 游戏画面"></canvas>
+            <div class="stage-overlay hidden" id="stage-overlay">
+              <div class="spinner"></div>
+              <p id="stage-overlay-text">正在启动…</p>
+            </div>
+            <button class="pause-hint hidden" id="pause-hint" type="button">已暂停 · 点击继续</button>
+            <div class="osd" id="osd" aria-live="polite"></div>
+
+          </div>
+
+            <div class="touch-controls hidden" id="touch-controls">
+              <div class="touch-row touch-top">
+                <button class="tbtn shoulder" data-btn="L" type="button">L</button>
+                <button class="tbtn shoulder" data-btn="R" type="button">R</button>
+              </div>
+              <div class="touch-row touch-main">
+                <div class="dpad">
+                  <button class="tbtn dp up" data-btn="Up" type="button" aria-label="上">▲</button>
+                  <button class="tbtn dp left" data-btn="Left" type="button" aria-label="左">◀</button>
+                  <button class="tbtn dp right" data-btn="Right" type="button" aria-label="右">▶</button>
+                  <button class="tbtn dp down" data-btn="Down" type="button" aria-label="下">▼</button>
+                </div>
+                <div class="face">
+                  <button class="tbtn face-b" data-btn="B" type="button">B</button>
+                  <button class="tbtn face-a" data-btn="A" type="button">A</button>
+                </div>
+              </div>
+              <div class="touch-row touch-system">
+                <button class="tbtn pill" data-btn="Select" type="button">SELECT</button>
+                <button class="tbtn pill" data-btn="Start" type="button">START</button>
+              </div>
+            </div>
+
+          <div class="toolbar" id="toolbar">
+            <div class="tool-group">
+              <button class="tool" id="btn-home" type="button" title="返回首页">
+                <svg><use href="#i-home" /></svg><span>首页</span>
+              </button>
+              <button class="tool" id="btn-pause" type="button" title="暂停 / 继续 (P)">
+                <svg><use href="#i-pause" /></svg><span id="btn-pause-label">暂停</span>
+              </button>
+            </div>
+            <div class="tool-sep"></div>
+            <div class="tool-group">
+              <button class="tool" id="btn-quicksave" type="button" title="快速保存 (F2)">
+                <svg><use href="#i-save" /></svg><span>保存</span>
+              </button>
+              <button class="tool" id="btn-quickload" type="button" title="快速读取 (F4)">
+                <svg><use href="#i-load" /></svg><span>读取</span>
+              </button>
+              <button class="tool" id="btn-rewind" type="button" title="按住倒带 (Backspace)">
+                <svg><use href="#i-rewind" /></svg><span>倒带</span>
+              </button>
+              <button class="tool" id="btn-slots" type="button" title="存档槽位 (G)">
+                <svg><use href="#i-grid" /></svg><span>槽位</span>
+                <b class="slot-pill" id="current-slot-pill">1</b>
+              </button>
+            </div>
+            <div class="tool-sep"></div>
+            <div class="tool-group">
+              <button class="tool" id="btn-speed" type="button" title="切换加速倍率 (按住 Tab 临时加速)">
+                <svg><use href="#i-ff" /></svg><span id="speed-label">1×</span>
+              </button>
+              <div class="volume-wrap">
+                <button class="tool" id="btn-mute" type="button" title="静音 (M)">
+                  <svg><use href="#i-volume" /></svg>
+                </button>
+                <input id="volume" class="volume" type="range" min="0" max="100" step="1" value="80" aria-label="音量" />
+              </div>
+              <button class="tool" id="btn-fullscreen" type="button" title="全屏 (F)">
+                <svg><use href="#i-expand" /></svg><span>全屏</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ------------------------------------------------------- save states -->
+    <aside class="side-panel hidden" id="states-panel" aria-label="存档槽位">
+      <div class="panel-head">
+        <h2>即时存档</h2>
+        <button class="icon-btn" id="btn-close-states" type="button" aria-label="关闭"><svg><use href="#i-x" /></svg></button>
+      </div>
+      <p class="panel-note" id="states-note">当前游戏：—</p>
+      <p class="panel-note muted small">导出的文件名带游戏名；可导入本应用或 mGBA 导出的 .ssN / PNG 状态文件。</p>
+      <div class="states-grid" id="states-grid"></div>
+      <div class="panel-actions">
+        <button class="btn tiny" id="btn-import-state" type="button">
+          <svg><use href="#i-upload" /></svg>导入存档到槽位 <b id="import-slot-label">1</b>
+        </button>
+      </div>
+      <div class="panel-foot">
+        <span class="muted">当前槽位</span>
+        <div class="slot-switcher">
+          <button class="icon-btn small" id="btn-slot-prev" type="button" aria-label="上一个槽位">−</button>
+          <b id="current-slot-label">1</b>
+          <button class="icon-btn small" id="btn-slot-next" type="button" aria-label="下一个槽位">+</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ---------------------------------------------------------- settings -->
+    <dialog id="settings-dialog" class="dialog">
+      <form method="dialog" class="dialog-inner">
+        <div class="dialog-head">
+          <h2>设置</h2>
+          <button class="icon-btn" value="close" type="submit" aria-label="关闭"><svg><use href="#i-x" /></svg></button>
+        </div>
+
+        <div class="dialog-body">
+          <section class="settings-group">
+            <h3>游玩</h3>
+            <label class="row">
+              <span>加速倍率</span>
+              <select id="set-speed">
+                <option value="2">2×</option>
+                <option value="3">3×</option>
+                <option value="4">4×</option>
+                <option value="8">8×</option>
+              </select>
+            </label>
+            <label class="row">
+              <span>默认音量</span>
+              <input id="set-volume" type="range" min="0" max="100" step="1" />
+            </label>
+            <label class="row">
+              <span>触屏按键</span>
+              <select id="set-touch">
+                <option value="auto">自动（触屏设备）</option>
+                <option value="on">总是显示</option>
+                <option value="off">关闭</option>
+              </select>
+            </label>
+            <label class="row">
+              <span>整数倍缩放</span>
+              <input id="set-integer" type="checkbox" />
+            </label>
+            <label class="row">
+              <span>显示帧率</span>
+              <input id="set-fps" type="checkbox" />
+            </label>
+          </section>
+
+          <section class="settings-group">
+            <h3>按键</h3>
+            <p class="muted small" id="keybind-status">点击键位后按下新按键，Esc 取消。同一个按键只能绑定一个动作。</p>
+            <div class="key-bindings" id="key-bindings"></div>
+            <div class="row actions">
+              <span>恢复默认键位</span>
+              <button class="btn tiny" id="btn-reset-keys" type="button">恢复</button>
+            </div>
+          </section>
+
+          <section class="settings-group">
+            <h3>存档</h3>
+            <label class="row">
+              <span>自动存档（崩溃恢复）</span>
+              <select id="set-autosave">
+                <option value="0">关闭</option>
+                <option value="30">每 30 秒</option>
+                <option value="60">每 60 秒</option>
+                <option value="120">每 2 分钟</option>
+              </select>
+            </label>
+            <label class="row">
+              <span>载入游戏时恢复自动存档</span>
+              <input id="set-autorestore" type="checkbox" />
+            </label>
+            <div class="row">
+              <span>当前目标游戏</span>
+              <b class="target-name" id="battery-save-target">未载入游戏</b>
+            </div>
+            <div class="row actions">
+              <span>电池存档（.sav）</span>
+              <div class="inline-actions">
+                <button class="btn tiny" id="btn-export-save" type="button"><svg><use href="#i-download" /></svg>导出</button>
+                <button class="btn tiny" id="btn-import-save" type="button"><svg><use href="#i-upload" /></svg>导入</button>
+              </div>
+            </div>
+            <p class="muted small battery-hint" id="battery-save-hint">请先载入游戏，再导出或导入电池存档。</p>
+          </section>
+
+          <section class="settings-group">
+            <h3>游戏</h3>
+            <div class="row actions">
+              <span>重置当前游戏</span>
+              <button class="btn tiny" id="btn-reset" type="button">重置</button>
+            </div>
+            <div class="row actions">
+              <span>清空全部数据</span>
+              <button class="btn tiny danger" id="btn-clear-all" type="button">清空</button>
+            </div>
+          </section>
+
+          <section class="settings-group about">
+            <h3>关于</h3>
+            <p>模拟器核心：<b id="about-engine">mGBA (WASM)</b></p>
+            <p>前端：GBA Web · 存档保存在本机</p>
+            <p class="muted small">页面需要 COOP/COEP 响应头（或本项目内置的 coi-serviceworker 兜底）才能启用 WASM 多线程。无法启动时请查看 README 的部署说明。</p>
+          </section>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- -------------------------------------------------------------- help -->
+    <dialog id="help-dialog" class="dialog">
+      <form method="dialog" class="dialog-inner">
+        <div class="dialog-head">
+          <h2>帮助</h2>
+          <button class="icon-btn" value="close" type="submit" aria-label="关闭"><svg><use href="#i-x" /></svg></button>
+        </div>
+        <div class="dialog-body help-body" id="help-body"></div>
+      </form>
+    </dialog>
+
+    <input id="rom-input" type="file" accept=".gba,.agb,.bin,.zip" hidden />
+    <input id="save-import-input" type="file" accept=".sav,.srm" hidden />
+    <input id="state-import-input" type="file" accept=".ss1,.ss2,.ss3,.ss4,.ss5,.ss6,.ss7,.ss8,.state,.png" hidden />
+
+    <div class="drop-overlay hidden" id="drop-overlay">
+      <div class="drop-overlay-card">
+        <svg><use href="#i-download" /></svg>
+        <strong>松开以载入 ROM</strong>
+        <span>.gba / .zip</span>
+      </div>
+    </div>
+
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+
+    <div class="boot-screen hidden" id="boot-screen">
+      <div class="boot-card">
+        <div class="spinner"></div>
+        <p id="boot-text">正在初始化模拟器核心…</p>
+        <p class="muted small">首次启动需要加载约 1.8 MB 的 WebAssembly</p>
+      </div>
+    </div>
+
+    <script type="module" src="./js/app.js"></script>
+  </body>
+</html>
