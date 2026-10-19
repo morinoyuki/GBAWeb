@@ -2,6 +2,8 @@
 
 GitHub: <https://github.com/morinoyuki/GBAWeb>
 
+[![Deploy to Cloudflare Pages](https://github.com/morinoyuki/GBAWeb/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/morinoyuki/GBAWeb/actions/workflows/deploy-pages.yml)
+
 在浏览器里运行 Game Boy Advance 游戏。模拟器核心是 **mGBA 2.5.1** 编译成的
 WebAssembly；前端、存档系统、输入与界面都是本项目自己写的。
 
@@ -116,6 +118,21 @@ Cross-Origin-Embedder-Policy: require-corp
 - `serve.mjs`：本地/自托管 Node 服务器（自动加头）。
 - `_headers`：Netlify、Cloudflare Pages 等。
 - `vercel.json`：Vercel。
+
+### 自动部署（GitHub Actions）
+
+`main` 分支的每次 push 会自动触发 `.github/workflows/deploy-pages.yml`，
+构建静态站点并部署到 Cloudflare Pages 项目 `gba-web`，线上地址为
+<https://gba.sox.lol>。
+
+首次启用需要在 GitHub 仓库的
+**Settings → Secrets and variables → Actions** 中添加一个 secret：
+
+- `CLOUDFLARE_API_TOKEN`：Cloudflare API Token，权限为
+  **Cloudflare Pages: Edit**（Account resources 选择本项目所在账户）。
+
+Account ID 已直接写在 workflow 中（它不是密钥）。添加后推送任意提交，或到
+**Actions → Deploy to Cloudflare Pages → Run workflow** 手动运行一次即可。
 
 Nginx 示例：
 
