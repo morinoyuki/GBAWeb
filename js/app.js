@@ -222,6 +222,7 @@ function cacheElements() {
     'import-slot-label',
     'btn-export-save',
     'btn-import-save',
+    'btn-load-autosave',
     'save-import-input',
     'btn-reset',
     'btn-clear-all',
@@ -372,7 +373,8 @@ function buildHelp() {
     <h3>存档说明</h3>
     <p class="muted small">
       即时存档保存在浏览器 IndexedDB 中，每个游戏 8 个槽位；电池存档（.sav）会在游戏写入存档时自动保存，
-      也可以手动导出/导入。清除浏览器站点数据会同时删除这些存档。
+      也可以手动导出/导入。自动存档用于崩溃恢复，可在设置中手动读取；导入 .sav 会清除旧的自动存档。
+      清除浏览器站点数据会同时删除这些存档。
     </p>
     <p class="help-note">
       模拟器依赖浏览器的 WebAssembly 多线程支持（SharedArrayBuffer）。如果无法启动，
@@ -821,7 +823,7 @@ async function openLibraryRom(meta) {
   }
 }
 
-async function playRom(rom) {
+async function playRom(rom, { restoreAutoSaveState = true } = {}) {
   if (!rom) return;
   if (!globalThis.crossOriginIsolated) {
     toast('无法启动：当前浏览器环境不支持模拟器所需的 WebAssembly 多线程，请使用最新版浏览器并通过 HTTPS 访问。', 'error', 9000);
@@ -873,6 +875,7 @@ async function playRom(rom) {
       bytes: new Uint8Array(rom.bytes),
       saveBytes: saveRec ? new Uint8Array(saveRec.bytes) : null,
       hash: rom.hash,
+      restoreAutoSaveState,
     });
     if (token !== state.loadToken) return;
 
@@ -1363,22 +1366,51 @@ async function importBatterySave(file) {
     toast('请先载入游戏');
     return;
   }
-  if (!window.confirm(`将 .sav 导入到《${state.rom.name}》，覆盖当前电池存档？`)) return;
+  if (!window.confirm(
+    `将 .sav 导入到《${state.rom.name}》，覆盖当前电池存档并清除旧的崩溃恢复自动存档？`,
+  )) return;
   try {
     const bytes = new Uint8Array(await file.arrayBuffer());
-    await store.putSave(state.rom.hash, bytes);
-    state.emulator.writeSave(bytes);
-    state.lastSaveSig = quickSignature(bytes);
-    // Reload the ROM so the core picks up the imported save.
     const rom = state.rom;
+    await store.putSave(rom.hash, bytes);
+    // Imported .sav is now the source of truth. Tear down the old game first
+    // so it cannot flush its save over the import or capture a fresh auto
+    // state, then remove the old crash-recovery state so it cannot win on
+    // this load or the next one.
     state.emulator.unload();
     state.playing = false;
     state.rom = null;
-    await playRom(rom);
-    toast(`已导入《${rom.name}》的电池存档`, 'ok');
+    await state.emulator.clearAutoSave(rom.name);
+    state.lastSaveSig = quickSignature(bytes);
+    await playRom(rom, { restoreAutoSaveState: false });
+    toast(`已导入《${rom.name}》的电池存档，旧自动存档已清除`, 'ok', 4500);
   } catch (err) {
     toast('导入失败：' + (err.message || err), 'error');
   }
+}
+
+async function loadAutoSaveManually() {
+  if (!state.emulator?.loaded || !state.rom) {
+    toast('请先载入游戏');
+    return;
+  }
+  if (!state.emulator.hasAutoSave()) {
+    toast('当前游戏没有可读取的自动存档', 'error');
+    return;
+  }
+  if (!window.confirm('读取自动存档会覆盖当前进度，继续？')) return;
+  if (!state.emulator.loadAutoSave()) {
+    toast('读取自动存档失败', 'error');
+    return;
+  }
+  state.playing = true;
+  state.lastFrameCount = state.emulator.frames;
+  state.fpsFrames = 0;
+  // Persist the battery save contained in the restored state if it differs.
+  scheduleSaveCapture(250);
+  els.settingsDialog.close();
+  osd('⏱️ 已读取自动存档');
+  toast('已读取自动存档', 'ok');
 }
 
 async function captureThumbnail() {
@@ -1490,6 +1522,12 @@ function updateSaveTargetUI() {
   const disabled = !rom;
   if (els.btnExportSave) els.btnExportSave.disabled = disabled;
   if (els.btnImportSave) els.btnImportSave.disabled = disabled;
+  if (els.btnLoadAutosave) {
+    els.btnLoadAutosave.disabled = disabled;
+    els.btnLoadAutosave.title = rom
+      ? '读取当前游戏的崩溃恢复自动存档'
+      : '请先载入游戏';
+  }
   if (els.batterySaveHint) {
     els.batterySaveHint.textContent = rom
       ? `导出文件名：${baseNameOf(rom.name)}.sav。导入会覆盖《${rom.name}》的电池存档。`
@@ -1608,6 +1646,7 @@ function bindUI() {
   });
   els.btnExportSave.addEventListener('click', exportBatterySave);
   els.btnImportSave.addEventListener('click', () => els.saveImportInput.click());
+  els.btnLoadAutosave.addEventListener('click', loadAutoSaveManually);
   els.saveImportInput.addEventListener('change', (event) => {
     const file = event.target.files?.[0];
     if (file) importBatterySave(file);

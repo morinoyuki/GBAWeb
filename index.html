@@ -284,6 +284,16 @@
               <span>载入游戏时恢复自动存档</span>
               <input id="set-autorestore" type="checkbox" />
             </label>
+            <div class="row actions">
+              <span>崩溃恢复存档</span>
+              <div class="inline-actions">
+                <button class="btn tiny" id="btn-load-autosave" type="button"
+                  title="读取当前游戏的崩溃恢复自动存档" disabled>
+                  <svg><use href="#i-load" /></svg>读取自动存档
+                </button>
+              </div>
+            </div>
+            <p class="muted small">自动存档在游戏运行时生成；手动读取会覆盖当前进度。</p>
             <div class="row">
               <span>当前目标游戏</span>
               <b class="target-name" id="battery-save-target">未载入游戏</b>

@@ -116,8 +116,9 @@ export class Emulator {
    * @param {Uint8Array} options.bytes
    * @param {Uint8Array|null} options.saveBytes  battery save to preload
    * @param {string} options.hash   content hash, used for bookkeeping
+   * @param {boolean} options.restoreAutoSaveState  restore crash-recovery state on load
    */
-  async loadRom({ name, bytes, saveBytes = null, hash }) {
+  async loadRom({ name, bytes, saveBytes = null, hash, restoreAutoSaveState = true }) {
     const Module = await this.boot();
     const base = baseName(name);
 
@@ -143,7 +144,21 @@ export class Emulator {
       Module.FS.writeFile(`${SAVES_DIR}/${base}.sav`, saveBytes);
     }
 
-    const ok = Module.loadGame(romPath);
+    // The auto-restore setting is normally applied by the app. For an
+    // imported battery save we temporarily suppress it so the old crash
+    // recovery state cannot overwrite the newly imported .sav.
+    const appRestore = this.autoSaveSettings
+      ? Boolean(this.autoSaveSettings.enabled && this.autoSaveSettings.restoreOnLoad)
+      : true;
+    let ok = false;
+    Module.setCoreSettings({
+      restoreAutoSaveStateOnLoad: Boolean(restoreAutoSaveState && appRestore),
+    });
+    try {
+      ok = Module.loadGame(romPath);
+    } finally {
+      Module.setCoreSettings({ restoreAutoSaveStateOnLoad: appRestore });
+    }
     if (!ok) {
       throw new Error('ROM 加载失败（文件可能损坏或不是有效的 GBA ROM）');
     }
@@ -279,6 +294,49 @@ export class Emulator {
     } catch {
       return null;
     }
+  }
+
+  hasAutoSave() {
+    const Module = this.module;
+    const path = Module?.autoSaveStateName
+      || (this.rom ? `/autosave/${this.rom.base}_auto.ss` : null);
+    if (!Module || !path) return false;
+    try {
+      return Boolean(Module.FS.analyzePath(path).exists);
+    } catch {
+      return false;
+    }
+  }
+
+  loadAutoSave() {
+    try {
+      return Boolean(this.module?.loadAutoSaveState?.());
+    } catch {
+      return false;
+    }
+  }
+
+  forceAutoSave() {
+    try {
+      return Boolean(this.module?.forceAutoSaveState?.());
+    } catch {
+      return false;
+    }
+  }
+
+  async clearAutoSave(name = this.rom?.name) {
+    const Module = this.module;
+    if (!Module || !name) return false;
+    const path = `/autosave/${baseName(name)}_auto.ss`;
+    let removed = false;
+    try {
+      Module.FS.unlink(path);
+      removed = true;
+    } catch {
+      /* no auto-save state */
+    }
+    await this.syncFS();
+    return removed;
   }
 
   /** Remove every on-disk trace of a ROM (autosave, battery save, states). */

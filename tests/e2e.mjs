@@ -251,6 +251,13 @@ async function runDesktop(browser) {
   await page.click('#btn-close-states');
 
   // ------------------------------------------------------ battery save I/O
+  // Create a stale crash-recovery state first. The imported .sav must win
+  // over it on both the import reload and the next normal page load.
+  await page.evaluate(() => window.__gba.resume());
+  await page.waitForTimeout(200);
+  const forcedStale = await page.evaluate(() => window.__gba.emulator.forceAutoSave());
+  check('crash-recovery state exists before .sav import', forcedStale === true);
+
   await page.setInputFiles('#save-import-input', 'tests/fixtures/custom.sav');
   await page.waitForTimeout(1200);
   await page.waitForFunction(
@@ -260,6 +267,10 @@ async function runDesktop(browser) {
   );
   let saveHead = await page.evaluate(() => Array.from(window.__gba.emulator.getSave().slice(0, 8)));
   check('imported .sav is applied', saveHead[0] === 0xa5, saveHead.join(','));
+  check(
+    'import removes the stale auto-restore state',
+    !(await page.evaluate(() => window.__gba.emulator.hasAutoSave())),
+  );
 
   await openSettings(page);
   check(
@@ -285,6 +296,18 @@ async function runDesktop(browser) {
   await page.waitForTimeout(900);
   saveHead = await page.evaluate(() => Array.from(window.__gba.emulator.getSave().slice(0, 8)));
   check('battery save persists across reload', saveHead[0] === 0xa5, saveHead.join(','));
+
+  const forcedManual = await page.evaluate(() => window.__gba.emulator.forceAutoSave());
+  check('manual auto-save can be captured', forcedManual === true);
+  await openSettings(page);
+  check('manual auto-save button is enabled', await page.isEnabled('#btn-load-autosave'));
+  await page.locator('#btn-load-autosave').scrollIntoViewIfNeeded();
+  await page.click('#btn-load-autosave');
+  await page.waitForTimeout(500);
+  check(
+    'manual auto-save can be read',
+    (await page.textContent('#toasts')).includes('已读取自动存档'),
+  );
 
   await page.click('#btn-slots');
   await page.waitForTimeout(300);
