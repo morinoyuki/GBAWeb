@@ -20,6 +20,41 @@ import * as store from './storage.js';
 import { readRomFile, formatBytes } from './rom.js';
 
 const SETTINGS_KEY = 'gba-web:settings:v1';
+const AUTOSAVE_STALE_PREFIX = 'gba-web:autosave-stale:';
+
+function autoSaveStaleKey(rom) {
+  return `${AUTOSAVE_STALE_PREFIX}${rom.hash}`;
+}
+
+function markAutoSaveStale(rom) {
+  if (!rom) return;
+  try {
+    // Synchronous on purpose: closing the tab right after an in-game save
+    // must not lose this marker to an unfinished async write.
+    localStorage.setItem(autoSaveStaleKey(rom), String(Date.now()));
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+function clearAutoSaveStale(rom) {
+  if (!rom) return;
+  try {
+    localStorage.removeItem(autoSaveStaleKey(rom));
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+function isAutoSaveStale(rom) {
+  if (!rom) return false;
+  try {
+    return localStorage.getItem(autoSaveStaleKey(rom)) !== null;
+  } catch {
+    return false;
+  }
+}
+
 const SLOT_COUNT = 8;
 const SPEEDS = [1, 2, 3, 4, 8];
 
@@ -78,7 +113,18 @@ async function init() {
   updateEngineBadge();
 
   state.emulator = new Emulator(els.canvas);
-  state.emulator.onSaveDataUpdated = () => scheduleSaveCapture();
+  state.emulator.onSaveDataUpdated = () => {
+    // An explicit in-game save supersedes any auto state captured before it.
+    // Write the battery save immediately and mark the old auto state stale
+    // synchronously so an immediate tab close cannot let it win on reload.
+    markAutoSaveStale(state.rom);
+    captureBatterySave().catch((err) => console.warn('save capture failed', err));
+    scheduleSaveCapture();
+  };
+  state.emulator.onAutoSaveCaptured = () => {
+    // A fresh auto state now covers the latest save data.
+    clearAutoSaveStale(state.rom);
+  };
   state.emulator.onCrash = () => {
     toast('模拟器核心发生错误，游戏已暂停', 'error', 6000);
     if (state.playing) pauseGame();
@@ -374,6 +420,7 @@ function buildHelp() {
     <p class="muted small">
       即时存档保存在浏览器 IndexedDB 中，每个游戏 8 个槽位；电池存档（.sav）会在游戏写入存档时自动保存，
       也可以手动导出/导入。自动存档用于崩溃恢复，可在设置中手动读取；导入 .sav 会清除旧的自动存档。
+      游戏内存档后会立即保存，并使存档前的自动存档失效，避免下次载入被回退。
       清除浏览器站点数据会同时删除这些存档。
     </p>
     <p class="help-note">
@@ -870,12 +917,20 @@ async function playRom(rom, { restoreAutoSaveState = true } = {}) {
     const saveRec = await store.getSave(rom.hash);
     if (token !== state.loadToken) return;
 
+    // If the user saved in-game after the last auto state was captured, the
+    // auto state can restore the game's pre-save RAM view and make the game
+    // write the old save back. Prefer the explicit battery save instead.
+    const staleAuto = isAutoSaveStale(rom);
+    if (staleAuto) {
+      await state.emulator.clearAutoSave(rom.name);
+    }
+
     await state.emulator.loadRom({
       name: rom.name,
       bytes: new Uint8Array(rom.bytes),
       saveBytes: saveRec ? new Uint8Array(saveRec.bytes) : null,
       hash: rom.hash,
-      restoreAutoSaveState,
+      restoreAutoSaveState: restoreAutoSaveState && !staleAuto,
     });
     if (token !== state.loadToken) return;
 
@@ -891,6 +946,7 @@ async function playRom(rom, { restoreAutoSaveState = true } = {}) {
     state.playAccumMs = rom.playtimeMs || 0;
     state.lastSaveSig = quickSignature(state.emulator.getSave());
     state.lastFrameCount = state.emulator.frames;
+    if (staleAuto) clearAutoSaveStale(rom);
 
     state.input.setEnabled(true);
     applyAutoSave();
@@ -1337,8 +1393,10 @@ async function captureBatterySave() {
   if (!bytes || !bytes.length) return false;
   const sig = quickSignature(bytes);
   if (sig === state.lastSaveSig) return false;
-  state.lastSaveSig = sig;
   await store.putSave(state.rom.hash, bytes);
+  // Only claim success after IndexedDB accepted the write; a failed write
+  // must remain eligible for the next retry (pagehide / 10s ticker).
+  state.lastSaveSig = sig;
   return true;
 }
 
@@ -1381,6 +1439,7 @@ async function importBatterySave(file) {
     state.playing = false;
     state.rom = null;
     await state.emulator.clearAutoSave(rom.name);
+    clearAutoSaveStale(rom);
     state.lastSaveSig = quickSignature(bytes);
     await playRom(rom, { restoreAutoSaveState: false });
     toast(`已导入《${rom.name}》的电池存档，旧自动存档已清除`, 'ok', 4500);
@@ -1403,6 +1462,8 @@ async function loadAutoSaveManually() {
     toast('读取自动存档失败', 'error');
     return;
   }
+  // The user explicitly chose this auto state; it is current again.
+  clearAutoSaveStale(state.rom);
   state.playing = true;
   state.lastFrameCount = state.emulator.frames;
   state.fpsFrames = 0;

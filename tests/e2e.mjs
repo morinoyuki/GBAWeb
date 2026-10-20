@@ -407,6 +407,50 @@ async function runDesktop(browser) {
   await page.close();
 }
 
+async function runSaveRegression(browser) {
+  console.log('\nIn-game save vs auto-save');
+  const errors = [];
+  const context = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+  const page = await context.newPage();
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+
+  // save-test.gba writes 0x11 to SRAM at boot, then 0x5A after ~5 seconds.
+  await page.goto(BASE);
+  await page.setInputFiles('#rom-input', 'tests/fixtures/save-test.gba');
+  await waitPlaying(page);
+  await page.waitForFunction(() => window.__gba.emulator.getSave()?.[0] === 0x11, null, { timeout: 15_000 });
+  check('test ROM writes its initial save', true);
+
+  const forced = await page.evaluate(() => window.__gba.emulator.forceAutoSave());
+  check('auto-save captured before the in-game save', forced === true);
+
+  await page.waitForFunction(() => window.__gba.emulator.getSave()?.[0] === 0x5A, null, { timeout: 15_000 });
+  const marked = await page.evaluate(() =>
+    Object.keys(localStorage).some((key) => key.startsWith('gba-web:autosave-stale:')));
+  check('in-game save marks the old auto state stale', marked);
+
+  // Reload right after the save. This models closing the tab immediately:
+  // the synchronous marker must make the next load ignore the pre-save state.
+  await page.reload();
+  await page.waitForSelector('#home-view:not(.hidden)');
+  await page.waitForTimeout(250);
+  await page.click('#btn-continue');
+  await waitPlaying(page);
+  await page.waitForTimeout(400);
+  const after = await page.evaluate(() => ({
+    head: Array.from(window.__gba.emulator.getSave().slice(0, 2)),
+    hasAutoSave: window.__gba.emulator.hasAutoSave(),
+  }));
+  check('in-game save survives an immediate reload', after.head[0] === 0x5A, after.head.join(','));
+  check('pre-save auto state is cleared on load', after.hasAutoSave === false);
+  check('no page errors (save vs auto-save)', errors.length === 0, errors.join(' | '));
+
+  await context.close();
+}
+
 async function runMobile(browser) {
   console.log('\nMobile');
   const errors = [];
@@ -467,6 +511,7 @@ async function main() {
   const browser = await chromium.launch();
   try {
     await runDesktop(browser);
+    await runSaveRegression(browser);
     await runMobile(browser);
   } finally {
     await browser.close();

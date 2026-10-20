@@ -24,6 +24,7 @@ export class Emulator {
     this.logs = [];
 
     this.onSaveDataUpdated = null;
+    this.onAutoSaveCaptured = null;
     this.onCrash = null;
     this.onLog = null;
 
@@ -41,6 +42,9 @@ export class Emulator {
       },
       saveDataUpdatedCallback: () => {
         this.onSaveDataUpdated?.();
+      },
+      autoSaveStateCapturedCallback: () => {
+        this.onAutoSaveCaptured?.();
       },
       coreCrashedCallback: () => {
         this.onCrash?.();
